@@ -135,3 +135,11 @@ iface = gr.Interface(
 )
 
 iface.launch(share=True, debug=True)
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+import torch
+
+model_path = "final_model"   # or path to your uploaded folder
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForSequenceClassification.from_pretrained(model_path)
+
+

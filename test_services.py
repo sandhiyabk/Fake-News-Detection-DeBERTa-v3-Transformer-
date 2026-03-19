@@ -4,12 +4,14 @@ import sys
 # Add the project root to sys path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model.fake_news_model import predict_news
-from services.news_fetcher import fetch_related_news
-from services.sentiment import analyze_sentiment
-from services.bias_detector import detect_bias
-from services.credibility_checker import check_sources
-from services.video_summary import get_video_summary
+from model.predict import predict_news  # type: ignore
+from services import (  # type: ignore
+    fetch_related_news,
+    analyze_sentiment,
+    detect_bias,
+    check_sources,
+    get_video_summary
+)
 
 def run_tests():
     sample_text = "Breaking News: Aliens found living in secret government base in Nevada. It's totally shocking and unbelievable!"

@@ -7,8 +7,10 @@ __pycache__/
 
 # Virtual environment
 venv/
-.env
 .venv/
+
+# Environment / secrets — NEVER commit this!
+.env
 
 # Model weights (large files - push separately via Git LFS if needed)
 saved_model/

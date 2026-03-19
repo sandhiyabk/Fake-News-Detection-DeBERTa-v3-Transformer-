@@ -107,8 +107,15 @@
                 <h2><i class="fa-brands fa-youtube"></i> Related Video Summary</h2>
                 {% if result.video %}
                     <div class="video-card">
-                        <iframe width="100%" height="315" src="{{ result.video.url }}" frameborder="0" allowfullscreen></iframe>
-                        <p><strong>{{ result.video.title }}</strong> - <em>{{ result.video.channel }}</em></p>
+                        <iframe width="100%" height="315"
+                            src="{{ result.video.url }}"
+                            title="{{ result.video.title }}"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowfullscreen
+                            referrerpolicy="strict-origin-when-cross-origin">
+                        </iframe>
+                        <p><strong>{{ result.video.title }}</strong> – <em>{{ result.video.channel }}</em></p>
                     </div>
                 {% else %}
                     <p class="no-data">No related video found.</p>

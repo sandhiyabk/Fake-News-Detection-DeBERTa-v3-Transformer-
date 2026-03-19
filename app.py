@@ -1,48 +1,78 @@
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, request, render_template, jsonify  # type: ignore
 import sys
 import os
+
+# Load environment variables from .env file (API keys, etc.)
+try:
+    from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
+except ImportError:
+    pass
 
 # Ensure the app can find the local modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model.predict import predict_news
-from services.news_fetcher import fetch_related_news
-from services.credibility_checker import check_sources
-from services.video_summary import get_video_summary
-import wikipedia
+from services import (  # type: ignore
+    fetch_related_news,
+    check_sources,
+    get_video_summary,
+    analyze_sentiment,
+    detect_bias
+)
+from model.predict import predict_news  # type: ignore
+import wikipedia  # type: ignore
 
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
 def home():
     if request.method == "POST":
-        text = request.form.get("news", "").strip()
+        # Form inputs often come as Any, cast to string explicitly
+        form_text = request.form.get("news", "")
+        text = str(form_text).strip()
+        
         if not text:
             return render_template("index.html", error="Please provide news text.")
             
         # 1. Prediction (DeBERTa + sentiment + bias)
-        prediction = predict_news(text)
+        prediction = predict_news(text) or {}
         
         # 2. Fetch Evidence / Related News
-        # Extract a short keyword representation of the text for search
-        search_topic = " ".join(text.split()[:8])
-        evidence = fetch_related_news(search_topic)
+        # Break text into search words and limit for linter safety
+        words = text.split()
+        from itertools import islice
+        search_keywords = list(islice(words, 8))
+        search_topic = " ".join(search_keywords)
+        evidence = fetch_related_news(search_topic) or []
         
         # 3. Check Source Credibility based on evidence
-        credibility = check_sources(evidence)
+        credibility = check_sources(evidence) or {}
         
         # 4. YouTube Video Summary
         video = get_video_summary(search_topic)
         
-        # Compile result object
+        # 5. Final Prediction Refinement (Evidence-based correction)
+        # Cast everything clearly to satisfy strict linters
+        final_label = str(prediction.get("label", "Unknown"))
+        final_confidence = float(prediction.get("confidence", 0.0))
+        verified_count = int(credibility.get("verified_count", 0))
+        
+        if verified_count >= 1 and final_label == "Fake" and final_confidence < 0.80:
+            final_label = "Real"
+            final_confidence = 0.85 
+            
+        # Format confidence safely as float using strings
+        formatted_conf = float(f"{final_confidence * 100:.1f}")
+            
+        # Compile result object with safe defaults
         result = {
-            "prediction_label": prediction["label"],
-            "prediction_confidence": round(prediction["confidence"] * 100, 1),
-            "sentiment": prediction.get("sentiment", "Unknown"),
-            "bias_level": prediction.get("bias_level", "Unknown"),
-            "bias_score": prediction.get("bias_score", 0),
-            "credibility_score": credibility["score"],
-            "verified_sources": credibility["verified_count"],
+            "prediction_label": final_label,
+            "prediction_confidence": formatted_conf,
+            "sentiment": str(prediction.get("sentiment", "Unknown")),
+            "bias_level": str(prediction.get("bias_level", "Unknown")),
+            "bias_score": float(prediction.get("bias_score", 0.0)),
+            "credibility_score": float(credibility.get("score", 0.0)),
+            "verified_sources": verified_count,
             "evidence": evidence,
             "video": video,
             "text": text
